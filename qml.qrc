@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>ui/main.qml</file>
+        <file>ui/components/ListViewColumnHeader.qml</file>
+        <file>ui/components/ListViewColumn.qml</file>
+    </qresource>
+</RCC>
