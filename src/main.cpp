@@ -11,7 +11,9 @@ int main(int argc, char *argv[]) {
 	QGuiApplication app(argc, argv);
 
 	Backend backend(&app);
-	qmlRegisterType<EventListModel>("EventList", 1, 0, "EventListModel");
+	SensorType sensorType;
+	qmlRegisterSingletonInstance<SensorType>("SensorReadout", 1, 0, "SensorType", &sensorType);
+	qmlRegisterType<EventListModel>("SensorReadout", 1, 0, "EventListModel");
 
 	QQmlApplicationEngine engine;
 	const QUrl url(QStringLiteral("qrc:/ui/main.qml"));

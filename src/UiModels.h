@@ -5,15 +5,19 @@
 #include <QObject>
 #include <QVariant>
 #include <QVector>
+#include <QMetaEnum>
 #include <QAbstractTableModel>
 
 #include <sensorreadout/SensorReadoutParser.h>
 
 namespace srp = SensorReadoutParser;
 
-namespace SensorReadout {
-	Q_NAMESPACE
-	enum SensorType {
+class SensorType : public QObject {
+	Q_OBJECT
+	Q_PROPERTY(QVector<int> values READ values NOTIFY valuesChanged)
+
+public:
+	enum Value {
 		Accelerometer = srp::EVENTID_ACCELEROMETER,
 		Gravity = srp::EVENTID_GRAVITY,
 		LinearAcceleration = srp::EVENTID_LINEAR_ACCELERATION,
@@ -38,103 +42,67 @@ namespace SensorReadout {
 		GroundTruthPath = srp::EVENTID_GROUND_TRUTH_PATH,
 		FileMetadata = srp::EVENTID_FILE_METADATA
 	};
-	Q_ENUM_NS(SensorType)
-}
+	Q_ENUM(Value);
 
-class XYZSensorEventUiModel {
-	Q_GADGET
-	Q_PROPERTY(qreal x READ x WRITE setX)
-	Q_PROPERTY(qreal y READ y WRITE setY)
-	Q_PROPERTY(qreal z READ z WRITE setZ)
-	srp::XYZSensorEventBase evt;
-public:
-	XYZSensorEventUiModel() {}
-	XYZSensorEventUiModel(const srp::XYZSensorEventBase& evt) : evt(evt) {}
-	qreal x() const { return evt.x; }
-	qreal y() const { return evt.y; }
-	qreal z() const { return evt.z; }
-	void setX(qreal x) { evt.x = x; }
-	void setY(qreal y) { evt.y = y; }
-	void setZ(qreal z) { evt.z = z; }
+	explicit SensorType(QObject* parent = nullptr) : QObject(parent) {
+		auto metaEnum = QMetaEnum::fromType<Value>();
+		for(size_t i = 0; i < metaEnum.keyCount(); ++i) {
+			m_values.push_back(metaEnum.value(i));
+		}
+	}
+
+	Q_INVOKABLE QString toName(Value value) const {
+		return QMetaEnum::fromType<Value>().valueToKey(value);
+	}
+
+	QVector<int> values() const { return m_values; }
+
+signals:
+	void valuesChanged();
+
+private:
+	QVector<int> m_values;
 };
-Q_DECLARE_METATYPE(XYZSensorEventUiModel);
-
-class SingleValueSensorEventUiModel {
-	Q_GADGET
-	Q_PROPERTY(qreal value READ value WRITE setValue)
-	srp::NumericSensorEventBase<1> evt;
-public:
-	SingleValueSensorEventUiModel() {}
-	SingleValueSensorEventUiModel(const srp::NumericSensorEventBase<1>& evt) : evt(evt) {}
-	qreal value() const { return evt.getValue<0>(); }
-	void setValue(qreal value) { evt.getValue<0>() = value; }
-};
-Q_DECLARE_METATYPE(SingleValueSensorEventUiModel);
-
 
 
 
 class EventUiModel {
 	Q_GADGET
-	Q_PROPERTY(SensorReadout::SensorType type READ type)
-	Q_PROPERTY(quint64 timestamp READ timestamp)
-	Q_PROPERTY(QVariant data READ data)
+	Q_PROPERTY(SensorType::Value type READ type WRITE setType)
+	Q_PROPERTY(quint64 timestamp READ timestamp WRITE setTimestamp)
+	Q_PROPERTY(QString dataRaw READ dataRaw WRITE setDataRaw)
 
 private: // data
-	SensorReadout::SensorType m_type;
+	SensorType::Value m_type;
 	quint64 m_timestamp;
-	QVariant m_data;
+	QString m_dataRaw;
 
 public:
 	EventUiModel(){}
-	EventUiModel(const srp::SensorEvent& sensorEvent) {
-		m_type = static_cast<SensorReadout::SensorType>(sensorEvent.eventType);
+	EventUiModel(const srp::RawSensorEvent& sensorEvent) {
+		m_type = static_cast<SensorType::Value>(sensorEvent.eventId);
 		m_timestamp = sensorEvent.timestamp;
-
-		#define SENSOREVT_TO_UIMODEL(_sensorEvent, _EventDataUiModelType) \
-			case srp::EventType::_sensorEvent:\
-				m_data = QVariant::fromValue(_EventDataUiModelType( std::get<srp::_sensorEvent ## Event>(sensorEvent.data) )); \
-				break;
-
-		switch(sensorEvent.eventType) {
-			SENSOREVT_TO_UIMODEL(Accelerometer, XYZSensorEventUiModel)
-			SENSOREVT_TO_UIMODEL(Gravity, XYZSensorEventUiModel)
-			SENSOREVT_TO_UIMODEL(LinearAcceleration, XYZSensorEventUiModel)
-			SENSOREVT_TO_UIMODEL(Gyroscope, XYZSensorEventUiModel)
-			SENSOREVT_TO_UIMODEL(MagneticField, XYZSensorEventUiModel)
-			SENSOREVT_TO_UIMODEL(Orientation, XYZSensorEventUiModel)
-			SENSOREVT_TO_UIMODEL(OrientationOld, XYZSensorEventUiModel)
-			SENSOREVT_TO_UIMODEL(GameRotationVector, XYZSensorEventUiModel)
-			//TODO: implement
-			case srp::EventType::Pressure:
-			case srp::EventType::RotationMatrix:
-			case srp::EventType::Wifi:
-			case srp::EventType::BLE:
-			case srp::EventType::RelativeHumidity:
-			case srp::EventType::RotationVector:
-			case srp::EventType::Light:
-			case srp::EventType::AmbientTemperature:
-			case srp::EventType::HeartRate:
-			case srp::EventType::GPS:
-			case srp::EventType::WifiRTT:
-			case srp::EventType::PedestrianActivity:
-			case srp::EventType::GroundTruth:
-			case srp::EventType::GroundTruthPath:
-			case srp::EventType::FileMetadata:
-				break;
-		}
+		m_dataRaw = QString::fromStdString(sensorEvent.parameterString);
 	}
 
-	SensorReadout::SensorType type() const { return m_type; }
+	SensorType::Value type() const { return m_type; }
 	quint64 timestamp() const { return m_timestamp; }
-	QVariant data() const { return m_data; }
+	QString dataRaw() const { return m_dataRaw; }
 
-	srp::SensorEvent toSensorEvent() const {
-		srp::SensorEvent evt;
-		evt.eventType = static_cast<srp::EventType>(m_type);
+	void setType(SensorType::Value type) { m_type = type; }
+	void setTimestamp(quint64 timestamp) { m_timestamp = timestamp; }
+	void setDataRaw(const QString& dataRaw) { m_dataRaw = dataRaw; }
+
+	srp::RawSensorEvent toSensorEvent() const {
+		srp::RawSensorEvent evt;
+		evt.eventId = static_cast<srp::EventId>(m_type);
 		evt.timestamp = m_timestamp;
-		//TODO: evt.data =
+		evt.parameterString = m_dataRaw.toStdString();
 		return evt;
+	}
+
+	Q_INVOKABLE EventUiModel clone() {
+		return EventUiModel(*this);
 	}
 };
 Q_DECLARE_METATYPE(EventUiModel);
@@ -145,7 +113,7 @@ class EventList : public QObject {
 	Q_OBJECT
 
 private:
-	std::vector<srp::SensorEvent> m_events;
+	std::vector<srp::RawSensorEvent> m_events;
 
 	bool indexIsValidItem(int index) const {
 		return (index >= 0 && index < m_events.size());
@@ -160,7 +128,7 @@ public:
 		if(!indexIsValidItem(index)) { throw std::runtime_error("Invalid index"); }
 		return EventUiModel(m_events[index]);
 	}
-	void setEvents(const std::vector<srp::SensorEvent>& events) {
+	void setEvents(const std::vector<srp::RawSensorEvent>& events) {
 		emit preReset();
 		m_events = events;
 		emit postReset();
@@ -205,77 +173,3 @@ public slots:
 	}
 
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-//class EventTableModel : public QAbstractTableModel {
-//	Q_OBJECT
-
-//	srp::AggregatingParser::AggregatedParseResult eventData;
-
-//public:
-//	EventTableModel(QObject* parent = nullptr) : QAbstractTableModel(parent) {}
-
-//	int rowCount(const QModelIndex &parent) const override {
-//		return eventData.size();
-//	}
-//	int columnCount(const QModelIndex &parent) const override {
-//		return 3;
-//	}
-//	QVariant data(const QModelIndex &index, int role) const override {
-//		if(role == Qt::DisplayRole) {
-//			switch(index.column()) {
-//				case 0:
-//					return static_cast<SensorReadout::SensorType>(eventData[index.row()].eventType);
-//				case 1:
-//					return QString("%1").arg(eventData[index.row()].timestamp);
-//				case 2:
-//					return QString("Data");
-//			}
-//		} else if(role == Qt::UserRole) {
-//			if(index.column() == 2) {
-//				return QVariant::fromValue(EventUiDataModel(eventData[index.row()]));
-//			}
-//		}
-//		return QVariant();
-//	}
-
-//	QHash<int, QByteArray> roleNames() const override {
-//		return {
-//			{Qt::DisplayRole,	"display"},
-//			{Qt::UserRole,		"data"}
-//		};
-//	}
-
-//	QVariant headerData(int section, Qt::Orientation orientation, int role) const override {
-//		if(role == Qt::DisplayRole) {
-//			switch(section) {
-//				case 0: return QString("EventType");
-//				case 1: return QString("Timestamp");
-//				case 2: return QString("Data");
-//			}
-//		}
-//		return QVariant();
-//	}
-
-//	Qt::ItemFlags flags(const QModelIndex &index) const override {
-//		return (Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-//	}
-
-//public: // Update api
-//	void update(const srp::AggregatingParser::AggregatedParseResult& parseResult) {
-//		beginResetModel();
-//		eventData = parseResult;
-//		endResetModel();
-//	}
-//};

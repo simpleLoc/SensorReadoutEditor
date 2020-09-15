@@ -3,5 +3,9 @@
         <file>ui/main.qml</file>
         <file>ui/components/ListViewColumnHeader.qml</file>
         <file>ui/components/ListViewColumn.qml</file>
+        <file>ui/components/SensorEventEditDialog.qml</file>
+        <file>ui/components/SensorEvent.js</file>
+        <file>ui/components/SensorEventDataEditor.qml</file>
+        <file>ui/components/SensorTypeComboBox.qml</file>
     </qresource>
 </RCC>

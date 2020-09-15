@@ -73,16 +73,18 @@ Item {
                 height: parent.height
                 width: columnHeader.columnWidths[index]
                 color: "lightgray"
+                Rectangle {
+                    id: columnSeparator
+                    visible: (index > 0)
+                    height: parent.height
+                    width: 1
+                    anchors.left: parent.left
+                    color: "black"
+                }
                 Text {
                     text: modelData.text
                     padding: 5
-                }
-                Rectangle {
-                    visible: (index < (columnHeader.columnCnt - 1))
-                    height: parent.height
-                    width: 1
-                    anchors.right: parent.right
-                    color: "black"
+                    anchors.left: columnSeparator.right
                 }
             }
         }

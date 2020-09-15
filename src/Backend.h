@@ -17,7 +17,7 @@ class Backend : public QObject {
 	Q_PROPERTY(EventList* events READ events NOTIFY eventsChanged)
 
 private: // data
-	srp::AggregatingParser::AggregatedParseResult m_data;
+	srp::AggregatingParser::AggregatedRawParseResult m_data;
 	EventList* m_events;
 
 public:
@@ -39,7 +39,7 @@ public: // UI interface
 		}
 		srp::AggregatingParser parser(fileStream);
 		try {
-			m_data = parser.parse();
+			m_data = parser.parseRaw();
 		} catch (std::runtime_error& e) {
 			emit onError(QString::fromStdString(e.what()));
 		}

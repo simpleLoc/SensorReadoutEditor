@@ -4,15 +4,18 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
 import Qt.labs.qmlmodels 1.0
 
-import EventList 1.0
+import SensorReadout 1.0
 import "components"
 
 Window {
     id: root
+
+    property bool hasChanges: false
+
     width: 640
     height: 480
     visible: true
-    title: qsTr("SensorReadout Editor")
+    title: qsTr("SensorReadout Editor") + (hasChanges ? "*" : "")
 
     ToolBar {
         id: toolBar
@@ -26,7 +29,6 @@ Window {
             id: openFileButton
             text: qsTr("Open File")
             onClicked: {
-                backend.openFile("/home/seiji/Documents/seiji.li/FHWS/Forschungsstelle/Data/private/museum_many_small_stairs_0.csv");
             }
         }
     }
@@ -65,11 +67,18 @@ Window {
             header: ListViewColumnHeader {
                 height: 25
                 width: parent.width
+                z: 10
                 columns: [
-                    ListViewColumn { text: "EventType"; minWidth: 50; maxWidth: 100 },
-                    ListViewColumn { text: "Timestamp"; minWidth: 100; maxWidth: 150 },
+                    ListViewColumn { text: "EventType"; minWidth: 50; maxWidth: 175 },
+                    ListViewColumn { text: "Timestamp"; minWidth: 100; maxWidth: 175 },
                     ListViewColumn { text: "Data" }
                 ]
+            }
+            headerPositioning: ListView.OverlayHeader
+            ScrollBar.vertical: ScrollBar {//FIXME: shown over header
+                active: true
+                z: 20
+                minimumSize: 0.1
             }
 
             model: EventListModel {
@@ -80,33 +89,64 @@ Window {
                 Rectangle {
                     height: eventContentLayout.height
                     width: eventContentLayout.width
+                    z: 5
                     color: {
                         if(eventItemMouseArea.containsPress) { return "#8fbee6"; }
                         return (eventItemMouseArea.containsMouse) ? "lightblue" : "white";
                     }
                     Row {
                         id: eventContentLayout
-                        Text {
-                            text: model.type
+                        RowLayout {
                             width: eventList.headerItem.columnWidths[0]
-                            padding: 4
+                            clip: true
+                            Text {
+                                text: model.type
+                                topPadding: 4
+                                bottomPadding: 4
+                                leftPadding: 4
+                                rightPadding: 2
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignRight
+                                text: "(" + SensorType.toName(model.type) + ")"
+                                elide: Text.ElideLeft
+                                color: "gray"
+                            }
                         }
-                        Text {
-                            text: model.timestamp
+                        RowLayout {
                             width: eventList.headerItem.columnWidths[1]
-                            padding: 4
+                            clip: true
+                            Text {
+                                text: model.timestamp
+                                topPadding: 4
+                                bottomPadding: 4
+                                leftPadding: 4
+                                rightPadding: 2
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                horizontalAlignment: Text.AlignRight
+                                text: "(" + toTimeString(model.timestamp) + ")"
+                                elide: Text.ElideRight
+                                color: "gray"
+                                function padDigits(number, digits) {
+                                    return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
+                                }
+                                function toTimeString(timestamp) {
+                                    var minutes = timestamp / 60000000000;
+                                    var fullMinutes = Math.trunc(minutes);
+                                    var seconds = (minutes - fullMinutes) * 60;
+                                    var fullSeconds = Math.trunc(seconds);
+                                    var fullMilliseconds = Math.trunc((seconds - fullSeconds) * 1000);
+                                    return padDigits(fullMinutes, 2) + ":" + padDigits(fullSeconds, 2) + "." + padDigits(fullMilliseconds, 4);
+                                }
+                            }
                         }
                         Text {
-                            text: renderData(model.data);
+                            text: model.dataRaw;
                             width: eventList.headerItem.columnWidths[2]
                             padding: 4
-                            function renderData(modelData) {
-                                var properties = [];
-                                for(var key in modelData) {
-                                    properties.push(key + ": " + modelData[key].toFixed(10));
-                                }
-                                return properties.join("; ");
-                            }
                         }
                     }
 
@@ -115,8 +155,10 @@ Window {
                         anchors.fill: parent
                         hoverEnabled: true
                         onDoubleClicked: {
-                            editingDialog.editEvent = model;
-                            editingDialog.open();
+                            editingDialog.openEdit(model.clone(), function(item) {
+                                backend.events.setEventAt(index, item);
+                                hasChanges = true;
+                            });
                         }
                     }
                 }
@@ -138,44 +180,12 @@ Window {
     }
 
 
-    Dialog {
+    SensorEventEditDialog {
         id: editingDialog
-        property var editEvent: null
-        width: parent.width / 2
-        height: parent.height / 2
+        width: Math.max(parent.width / 2, 350)
+        height: Math.max(parent.height / 2, 350)
         anchors.centerIn: parent
         modal: true
-
-        GridLayout {
-            x: 0
-            y: 0
-            width: editingDialog.width - 2 * editingDialog.padding
-            height: editingDialog.height - 2 * editingDialog.padding
-            columns: 2
-            rowSpacing: 10
-            columnSpacing: 5
-            Text { text: "EventType: "; font.bold: true }
-            Text { Layout.fillWidth: true; text: editingDialog.editEvent.type }
-
-            Text { text: "Timestamp: "; font.bold: true }
-            TextField {
-                Layout.fillWidth: true;
-                text: editingDialog.editEvent.timestamp
-                onTextEdited: editingDialog.editEvent.timestamp = parseInt(text)
-            }
-
-            Text {
-                text: "asdf"
-            }
-            Text {
-                Layout.fillWidth: true;
-                text: JSON.stringify(editingDialog.editEvent.data)
-            }
-
-            Item {//vertical fill
-                Layout.fillHeight: true
-            }
-        }
     }
 
 
@@ -184,7 +194,6 @@ Window {
         backend.onError.connect(function(errorMessage) {
             console.log(errorMessage);
         });
-        backend.openFile("/home/seiji/Documents/seiji.li/FHWS/Forschungsstelle/Data/private/museum_stairs_down_0.csv");
     }
 
 }
