@@ -8,9 +8,20 @@ ComboBox {
     id: control
     valueRole: "value"
     textRole: "text"
+
+    property int currentSensorType: SensorType.UNKNOWN
+    onCurrentSensorTypeChanged: {
+        var newIdx = indexOfValue(currentSensorType);
+        // stop ring-binding
+        if(currentIndex !== newIdx) { currentIndex = newIdx; }
+    }
+
     model: SensorType.values.map(function(value) {
         return { value: value, text: SensorType.toName(value) }
     });
+    onActivated: {
+        currentSensorType = currentValue;
+    }
 }
 
 /*##^##

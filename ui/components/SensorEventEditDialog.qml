@@ -7,20 +7,29 @@ import SensorReadout 1.0
 Dialog {
     id: editingDialog
     /* edit state */
-    readonly property var emptyEvent: { "type": 0, "timestamp": 0, "dataRaw": "" };
-    property var __editEvent: emptyEvent
+    property var __editEvent: null
     property var __saveFn: null
+    property var __cancelFn: null
 
-    function openEdit(event, saveFn) {
+    function openEdit(event, saveFn, cancelFn) {
         __editEvent = event;
         __saveFn = saveFn;
-        eventDataEditor.sensorEvent = event;
+        __cancelFn = cancelFn;
         open();
     }
     function __save() {
         __editEvent.dataRaw = eventDataEditor.sensorEvent.dataRaw;
         __saveFn(__editEvent);
-        __editEvent = emptyEvent;
+        __resetAndClose();
+    }
+    function __cancel() {
+        if(__cancelFn) { __cancelFn(); }
+        __resetAndClose();
+    }
+    function __resetAndClose() {
+        __editEvent = null;
+        __saveFn = null;
+        __cancelFn = null;
         close();
     }
 
@@ -32,13 +41,22 @@ Dialog {
 
 
         Text { text: "EventType: "; font.bold: true }
-        Text { Layout.fillWidth: true; text: editingDialog.__editEvent.type + " (" + SensorType.toName(editingDialog.__editEvent.type) + ")" }
+        SensorTypeComboBox {
+            Layout.fillWidth: true
+            currentSensorType: (__editEvent) ? __editEvent.type : SensorType.UNKNOWN
+            onActivated: {
+                var newEvent = editingDialog.__editEvent;
+                newEvent.type = currentSensorType;
+                editingDialog.__editEvent = newEvent;
+            }
+        }
 
         Text { text: "Timestamp: "; font.bold: true }
         TextField {
             Layout.fillWidth: true;
-            text: editingDialog.__editEvent.timestamp
-            onTextEdited: editingDialog.__editEvent.timestamp = parseInt(text)
+            selectByMouse: true
+            text: (__editEvent) ? __editEvent.timestamp : ""
+            onTextEdited: __editEvent.timestamp = parseInt(text)
         }
 
         Text { text: "Parameters:"; Layout.columnSpan: 2; font.bold: true }
@@ -47,6 +65,7 @@ Dialog {
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.columnSpan: 2
+            sensorEvent: __editEvent
         }
 
         Row {
@@ -60,10 +79,7 @@ Dialog {
             }
             Button {
                 text: "Cancel"
-                onClicked: {
-                    __editEvent = emptyEvent;
-                    close();
-                }
+                onClicked: __cancel()
             }
         }
     }

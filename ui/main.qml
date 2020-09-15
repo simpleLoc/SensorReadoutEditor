@@ -17,6 +17,32 @@ Window {
     visible: true
     title: qsTr("SensorReadout Editor") + (hasChanges ? "*" : "")
 
+
+
+    function insertNewEventAtIdx(index) {
+        var timestamp = 0;
+        if(index === -1) { // append
+            index = backend.events.len();
+        } else { // copy timestamp from event at index
+            timestamp = backend.events.getEventAt(index);
+        }
+        console.assert(backend.events.insertEmptyEvent(index));
+        var newEvent = backend.events.getEventAt(index).clone();
+        newEvent.timestamp = timestamp;
+        editingDialog.openEdit(newEvent,
+            function(item) { // saveFn
+                backend.events.setEventAt(index, item);
+            },
+            function() { //cancelFn
+                backend.events.removeEvent(index);
+            }
+        );
+        root.hasChanges = true;
+    }
+
+
+
+
     ToolBar {
         id: toolBar
         anchors.left: parent.left
@@ -92,7 +118,7 @@ Window {
                     z: 5
                     color: {
                         if(eventItemMouseArea.containsPress) { return "#8fbee6"; }
-                        return (eventItemMouseArea.containsMouse) ? "lightblue" : "white";
+                        return (eventItemMouseArea.containsMouse || eventList.currentIndex == index) ? "lightblue" : "white";
                     }
                     Row {
                         id: eventContentLayout
@@ -150,14 +176,40 @@ Window {
                         }
                     }
 
+                    Menu {
+                        id: eventContextMenu
+
+                        MenuItem {
+                            text: "Remove"
+                            onTriggered: {
+                                root.hasChanges = true;
+                                backend.events.removeEvent(index);
+                            }
+                        }
+                        MenuSeparator {}
+                        MenuItem {
+                            text: "New Here"
+                            onTriggered: root.insertNewEventAtIdx(index)
+                        }
+                    }
+
                     MouseArea {
                         id: eventItemMouseArea
                         anchors.fill: parent
                         hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        onClicked: {
+                            if(mouse.button & Qt.LeftButton) {
+                                eventList.currentIndex = index;
+                            } else if(mouse.button & Qt.RightButton) {
+                                eventContextMenu.popup();
+                            }
+                        }
+
                         onDoubleClicked: {
                             editingDialog.openEdit(model.clone(), function(item) {
+                                root.hasChanges = true;
                                 backend.events.setEventAt(index, item);
-                                hasChanges = true;
                             });
                         }
                     }

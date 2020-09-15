@@ -40,7 +40,8 @@ public:
 		PedestrianActivity = srp::EVENTID_PEDESTRIAN_ACTIVITY,
 		GroundTruth = srp::EVENTID_GROUND_TRUTH,
 		GroundTruthPath = srp::EVENTID_GROUND_TRUTH_PATH,
-		FileMetadata = srp::EVENTID_FILE_METADATA
+		FileMetadata = srp::EVENTID_FILE_METADATA,
+		UNKNOWN = 99999
 	};
 	Q_ENUM(Value);
 
@@ -73,9 +74,9 @@ class EventUiModel {
 	Q_PROPERTY(QString dataRaw READ dataRaw WRITE setDataRaw)
 
 private: // data
-	SensorType::Value m_type;
-	quint64 m_timestamp;
-	QString m_dataRaw;
+	SensorType::Value m_type = SensorType::Value::UNKNOWN;
+	quint64 m_timestamp = 0;
+	QString m_dataRaw = QString("");
 
 public:
 	EventUiModel(){}
@@ -122,12 +123,6 @@ private:
 public:
 	explicit EventList(QObject* parent = nullptr) : QObject(parent) {}
 
-	int len() const { return m_events.size(); }
-
-	EventUiModel getEventAt(int index) const {
-		if(!indexIsValidItem(index)) { throw std::runtime_error("Invalid index"); }
-		return EventUiModel(m_events[index]);
-	}
 	void setEvents(const std::vector<srp::RawSensorEvent>& events) {
 		emit preReset();
 		m_events = events;
@@ -145,20 +140,37 @@ signals:
 	void postEventChange(int index);
 
 public slots:
+	int len() const { return m_events.size(); }
+
+	EventUiModel getEventAt(int index) const {
+		if(!indexIsValidItem(index)) { throw std::runtime_error("Invalid index"); }
+		return EventUiModel(m_events[index]);
+	}
 	bool setEventAt(int index, const EventUiModel& event) {
 		if(!indexIsValidItem(index)) { return false; }
-		emit preEventChange(index);
-		m_events[index] = event.toSensorEvent();
-		emit postEventChange(index);
+		if(m_events[index].timestamp == event.timestamp()) {
+			emit preEventChange(index);
+			m_events[index] = event.toSensorEvent();
+			emit postEventChange(index);
+		} else {
+			// timestamp changed, we need to sort
+			emit preReset();
+			m_events[index] = event.toSensorEvent();
+			std::sort(m_events.begin(), m_events.end(), [](const auto& evt0, const auto& evt1){
+				return (evt1.timestamp > evt0.timestamp);
+			});
+			emit postReset();
+		}
 		return true;
 	}
-	bool insertEvent(int index, const EventUiModel& event) {
+	bool insertEmptyEvent(int index) {
+		EventUiModel newEvent;
 		if(indexIsValidItem(index)) {
 			emit preEventInserted(index);
-			m_events.insert(m_events.begin() + index, event.toSensorEvent());
+			m_events.insert(m_events.begin() + index, newEvent.toSensorEvent());
 		} else if(index == m_events.size()) {
 			emit preEventInserted(index);
-			m_events.push_back(event.toSensorEvent());
+			m_events.push_back(newEvent.toSensorEvent());
 		} else { return false; }
 
 		emit postEventInserted();
