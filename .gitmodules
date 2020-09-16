@@ -1,3 +1,6 @@
 [submodule "lib/SensorReadoutParsers"]
 	path = lib/SensorReadoutParsers
 	url = https://github.com/simpleLoc/SensorReadoutParsers.git
+[submodule "lib/SortFilterProxyModel"]
+	path = lib/SortFilterProxyModel
+	url = https://github.com/oKcerG/SortFilterProxyModel.git

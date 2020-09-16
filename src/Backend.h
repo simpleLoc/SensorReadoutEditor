@@ -19,6 +19,7 @@ class Backend : public QObject {
 private: // data
 	srp::AggregatingParser::AggregatedRawParseResult m_data;
 	EventList* m_events;
+	std::optional<std::string> currentFile;
 
 public:
 	explicit Backend(QObject* parent = nullptr) : QObject(parent) {
@@ -32,9 +33,12 @@ public: // Properties
 
 public: // UI interface
 	Q_INVOKABLE void openFile(const QString& filePath) {
-		std::fstream fileStream(filePath.toStdString());
+		currentFile = filePath.toStdString();
+		std::fstream fileStream(currentFile.value());
 		if(!fileStream.is_open()) {
-			emit onError(QString("Failed to open file"));
+			currentFile = {};
+			m_events->clear();
+			emit onError(QString("Failed to open source file."));
 			return;
 		}
 		srp::AggregatingParser parser(fileStream);
@@ -45,6 +49,33 @@ public: // UI interface
 		}
 		m_events->setEvents(m_data);
 	};
+
+	Q_INVOKABLE bool saveFile() {
+		if(currentFile) {
+			return saveFile(QString::fromStdString(currentFile.value()));
+		}
+		return false;
+	}
+
+	Q_INVOKABLE bool saveFile(const QString& filePath) {
+		std::ofstream fileStream(filePath.toStdString());
+		if(!fileStream.is_open()) {
+			emit onError(QString("Failed to open destination file."));
+			return false;
+		}
+		srp::Serializer serializer(fileStream);
+		try {
+			for(const auto& event : m_events->getEvents()) {
+				serializer.write(event);
+			}
+		} catch (std::runtime_error& e) {
+			emit onError(QString::fromStdString(e.what()));
+			return false;
+		}
+		// only change currentFile if saving was successful
+		currentFile = filePath.toStdString();
+		return true;
+	}
 
 signals:
 	void eventsChanged();

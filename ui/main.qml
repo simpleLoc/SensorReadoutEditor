@@ -2,7 +2,7 @@ import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
-import Qt.labs.qmlmodels 1.0
+import QtQuick.Dialogs 1.3
 
 import SensorReadout 1.0
 import "components"
@@ -40,8 +40,58 @@ Window {
         root.hasChanges = true;
     }
 
+    function jumpToIdx(index) {
+        eventList.positionViewAtIndex(index, ListView.Center);
+        eventList.currentIndex = index;
+    }
+
+    function jumpToNextEventOfType(sensorType) {
+        var startIdx = (eventList.currentIndex === -1) ? 0 : (eventList.currentIndex + 1);
+        var nextIdx = backend.events.findNextOfType(startIdx, sensorType);
+        if(nextIdx >= 0) {
+            jumpToIdx(nextIdx);
+        }
+    }
+    function jumpToPreviousEventOfType(sensorType) {
+        if(eventList.currentIndex === -1) { return; }
+        var nextIdx = backend.events.findPreviousOfType(eventList.currentIndex - 1, sensorType);
+        if(nextIdx >= 0) {
+            jumpToIdx(nextIdx);
+        }
+    }
 
 
+    FileDialog {
+        id: openFileDialog
+        title: "Open a SensorReadout file"
+        folder: shortcuts.home
+        nameFilters: ["SensorReadout files (*.csv)"]
+        onAccepted: {
+            var path = fileUrl.toString();
+            if(path.startsWith("file:///")) {
+                path = path.substring(7);
+            }
+            backend.openFile(path);
+        }
+    }
+    FileDialog {
+        id: saveAsFileDialog
+        title: "Save SensorReadout file"
+        folder: shortcuts.home
+        selectMultiple: false
+        selectFolder: false
+        selectExisting: false
+        nameFilters: ["SensorReadout files (*.csv)"]
+        onAccepted: {
+            var path = fileUrl.toString();
+            if(path.startsWith("file:///")) {
+                path = path.substring(7);
+            }
+            if(backend.saveFile(path)) {
+                root.hasChanges = false;
+            }
+        }
+    }
 
     ToolBar {
         id: toolBar
@@ -51,10 +101,58 @@ Window {
         anchors.rightMargin: 0
         anchors.top: root.top
 
-        ToolButton {
-            id: openFileButton
-            text: qsTr("Open File")
-            onClicked: {
+        Row {
+            ToolButton {
+                id: openFileButton
+                text: qsTr("Open")
+                onClicked: {
+                    openFileDialog.open();
+                }
+            }
+            ToolButton {
+                id: saveFileButton
+                text: qsTr("Save") + (hasChanges ? "*" : "")
+                onClicked: {
+                    if(backend.saveFile()) {
+                        root.hasChanges = false;
+                    }
+                }
+            }
+            ToolButton {
+                id: saveAsFileButton
+                text: qsTr("Save as")
+                onClicked: {
+                    saveAsFileDialog.open();
+                }
+            }
+            ToolSeparator {}
+            ToolButton {
+                id: editMetadataButton
+                text: qsTr("Edit Metadata")
+                onClicked: {
+                    var metadataIdx = backend.events.findNextOfType(0, SensorType.FileMetadata);
+                    var eventWasNew = (metadataIdx === -1);
+                    if(eventWasNew) {
+                        metadataIdx = 0; // insert metadata event at position 0
+                        console.assert(backend.events.insertEmptyEvent(metadataIdx));
+                        var newEvent = backend.events.getEventAt(metadataIdx).clone();
+                        newEvent.timestamp = 0;
+                        newEvent.type = SensorType.FileMetadata;
+                        backend.events.setEventAt(metadataIdx, newEvent);
+                    }
+                    var metadataEvent = backend.events.getEventAt(metadataIdx);
+                    editingDialog.openEdit(metadataEvent.clone(),
+                        function(item) { // saveFn
+                            backend.events.setEventAt(metadataIdx, item);
+                        },
+                        function() { //cancelFn
+                            if(eventWasNew) { // we added the metadata event -> delete it again
+                                backend.events.removeEvent(metadataIdx);
+                            }
+                        }
+                    );
+                    root.hasChanges = true;
+                }
             }
         }
     }
@@ -67,9 +165,39 @@ Window {
         anchors.topMargin: 0
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 0
-        width: 200
-        color: "#ffaa00"
+        width: 250
 
+        ColumnLayout {
+            anchors.fill: parent
+            GroupBox {
+                Layout.fillWidth: true
+                title: qsTr("Jump to next...")
+                ColumnLayout {
+                    width: parent.width
+                    SensorTypeComboBox {
+                        id: jumpToSensorTypeCombo
+                        Layout.fillWidth: true
+                        currentSensorType: SensorType.Accelerometer
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Button {
+                            text: "Prev"
+                            onClicked: jumpToPreviousEventOfType(jumpToSensorTypeCombo.currentSensorType)
+                        }
+                        Rectangle { Layout.fillWidth: true; Layout.fillHeight: true; }
+                        Button {
+                            text: "Next"
+                            onClicked: jumpToNextEventOfType(jumpToSensorTypeCombo.currentSensorType)
+                        }
+                    }
+                }
+            }
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+            }
+        }
     }
     Rectangle {
         id: eventListComponent
@@ -79,8 +207,7 @@ Window {
         anchors.rightMargin: 0
         anchors.top: toolBar.bottom
         anchors.topMargin: 0
-        height: 0.5 * (parent.height - toolBar.height)
-        color: "#005500"
+        height: 1.0 * (parent.height - toolBar.height)
 
         ListView {
             id: eventList
@@ -117,8 +244,9 @@ Window {
                     width: eventContentLayout.width
                     z: 5
                     color: {
-                        if(eventItemMouseArea.containsPress) { return "#8fbee6"; }
-                        return (eventItemMouseArea.containsMouse || eventList.currentIndex == index) ? "lightblue" : "white";
+                        if(eventItemMouseArea.containsPress) { return "lightsteelblue"; }
+                        if(eventList.currentIndex == index) { return "#8fbee6"; }
+                        return (eventItemMouseArea.containsMouse) ? "lightblue" : "white";
                     }
                     Row {
                         id: eventContentLayout
@@ -180,13 +308,20 @@ Window {
                         id: eventContextMenu
 
                         MenuItem {
+                            text: "Jump to next (same type)"
+                            onTriggered: {
+                                eventList.currentIndex = index;
+                                jumpToNextEventOfType(model.type);
+                            }
+                        }
+                        MenuSeparator {}
+                        MenuItem {
                             text: "Remove"
                             onTriggered: {
                                 root.hasChanges = true;
                                 backend.events.removeEvent(index);
                             }
                         }
-                        MenuSeparator {}
                         MenuItem {
                             text: "New Here"
                             onTriggered: root.insertNewEventAtIdx(index)
@@ -218,7 +353,7 @@ Window {
             delegate: eventDelegate
         }
     }
-    Rectangle {
+    Rectangle { //future
         id: dataPreviewComponent
         anchors.left: sideBarComponent.right
         anchors.leftMargin: 0
@@ -228,7 +363,6 @@ Window {
         anchors.topMargin: 0
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 0
-        color: "blue"
     }
 
 
@@ -241,10 +375,16 @@ Window {
     }
 
 
+    MessageDialog {
+        id: errorDialog
+        title: "An error occured"
+    }
+
     // init
     Component.onCompleted: {
         backend.onError.connect(function(errorMessage) {
-            console.log(errorMessage);
+            errorDialog.text = errorMessage;
+            errorDialog.open();
         });
     }
 

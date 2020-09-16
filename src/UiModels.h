@@ -119,13 +119,38 @@ private:
 	bool indexIsValidItem(int index) const {
 		return (index >= 0 && index < m_events.size());
 	}
+	bool isLastIndex(int index) const {
+		return (index ==( m_events.size() - 1));
+	}
+
+	// find helpers
+	int findNext(int index, std::function<bool(const srp::RawSensorEvent&)> findFn) {
+		if(!indexIsValidItem(index)) { return -1; }
+		auto result = std::find_if(m_events.begin() + index, m_events.end(), findFn);
+		if(result == m_events.end()) { return -1; }
+		return (result - m_events.begin());
+	}
+	int findPrevious(int index, std::function<bool(const srp::RawSensorEvent&)> findFn) {
+		if(!indexIsValidItem(index)) { return -1; }
+		size_t startOffset = m_events.size() - index - 1;
+		auto result = std::find_if(m_events.rbegin() + startOffset, m_events.rend(), findFn);
+		if(result == m_events.rend()) { return -1; }
+		return m_events.size() - (result - m_events.rbegin()) - 1;
+	}
 
 public:
 	explicit EventList(QObject* parent = nullptr) : QObject(parent) {}
 
+	const std::vector<srp::RawSensorEvent>& getEvents() const { return m_events; }
+
 	void setEvents(const std::vector<srp::RawSensorEvent>& events) {
 		emit preReset();
 		m_events = events;
+		emit postReset();
+	}
+	void clear() {
+		emit preReset();
+		m_events.clear();
 		emit postReset();
 	}
 
@@ -182,6 +207,16 @@ public slots:
 			m_events.erase(m_events.begin() + index);
 			emit postEventRemoved();
 		}
+	}
+
+	// ########
+	// # Finding / Filtering
+	// ########
+	int findNextOfType(int index, int sensorType) {
+		return findNext(index, [sensorType](const auto& evt) { return evt.eventId == sensorType; });
+	}
+	int findPreviousOfType(int index, int sensorType) {
+		return findPrevious(index, [sensorType](const auto& evt) { return evt.eventId == sensorType; });
 	}
 
 };

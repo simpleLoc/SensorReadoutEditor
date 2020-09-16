@@ -9,6 +9,9 @@ int main(int argc, char *argv[]) {
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
 	QGuiApplication app(argc, argv);
+	app.setOrganizationDomain("simpleLoc.de");
+	app.setOrganizationName("simpleLoc");
+	app.setApplicationName("SensorReadout Editor");
 
 	Backend backend(&app);
 	SensorType sensorType;

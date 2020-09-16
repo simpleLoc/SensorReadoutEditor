@@ -18,13 +18,14 @@ find_package(Qt5 COMPONENTS Core Quick REQUIRED)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
+add_definitions(-fPIC)
 
 # editor
 #######################
 file(GLOB_RECURSE EDITOR_SOURCES "src/*.cpp")
 file(GLOB_RECURSE EDITOR_HEADERS "src/*.h")
 
-add_executable(SensorReadoutEditor ${EDITOR_SOURCES} ${EDITOR_HEADERS} qml.qrc)
+add_executable(SensorReadoutEditor ${EDITOR_SOURCES} ${EDITOR_HEADERS} qml.qrc $<TARGET_OBJECTS:SortFilterProxyModel>)
 
 target_compile_definitions(SensorReadoutEditor
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
