@@ -6,6 +6,7 @@ import SensorReadout 1.0
 
 Dialog {
     id: editingDialog
+    SystemPalette { id: systemPalette; colorGroup: SystemPalette.Active }
     /* edit state */
     property var __editEvent: null
     property var __saveFn: null
@@ -40,7 +41,7 @@ Dialog {
         columnSpacing: 5
 
 
-        Text { text: "EventType: "; font.bold: true }
+        Label { text: "EventType: "; font.bold: true }
         SensorTypeComboBox {
             Layout.fillWidth: true
             currentSensorType: (__editEvent) ? __editEvent.type : SensorType.UNKNOWN
@@ -51,7 +52,7 @@ Dialog {
             }
         }
 
-        Text { text: "Timestamp: "; font.bold: true }
+        Label { text: "Timestamp: "; font.bold: true }
         TextField {
             Layout.fillWidth: true;
             selectByMouse: true
@@ -59,7 +60,7 @@ Dialog {
             onTextEdited: __editEvent.timestamp = parseInt(text)
         }
 
-        Text { text: "Parameters:"; Layout.columnSpan: 2; font.bold: true }
+        Label { text: "Parameters:"; Layout.columnSpan: 2; font.bold: true }
         SensorEventDataEditor {
             id: eventDataEditor
             Layout.fillWidth: true

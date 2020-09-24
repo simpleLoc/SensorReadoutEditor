@@ -4,3 +4,6 @@
 [submodule "lib/SortFilterProxyModel"]
 	path = lib/SortFilterProxyModel
 	url = https://github.com/oKcerG/SortFilterProxyModel.git
+[submodule "lib/subprocess"]
+	path = lib/subprocess
+	url = https://github.com/benman64/subprocess.git

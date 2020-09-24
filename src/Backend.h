@@ -5,21 +5,25 @@
 #include <iostream>
 
 #include <QObject>
+#include <QSettings>
 #include <QString>
 
 #include <sensorreadout/SensorReadoutParser.h>
 #include "UiModels.h"
+#include "AppSettings.h"
 
 namespace srp = SensorReadoutParser;
 
 class Backend : public QObject {
 	Q_OBJECT
 	Q_PROPERTY(EventList* events READ events NOTIFY eventsChanged)
+	Q_PROPERTY(AppSettings* settings READ settings NOTIFY settingsChanged)
 
 private: // data
 	srp::AggregatingParser::AggregatedRawParseResult m_data;
 	EventList* m_events;
 	std::optional<std::string> currentFile;
+	AppSettings m_settings;
 
 public:
 	explicit Backend(QObject* parent = nullptr) : QObject(parent) {
@@ -30,6 +34,7 @@ public:
 
 public: // Properties
 	EventList* events() const { return m_events; }
+	AppSettings* settings() { return &m_settings; }
 
 public: // UI interface
 	Q_INVOKABLE void openFile(const QString& filePath) {
@@ -79,6 +84,7 @@ public: // UI interface
 
 signals:
 	void eventsChanged();
+	void settingsChanged();
 
 	void onError(const QString& message);
 

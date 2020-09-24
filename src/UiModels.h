@@ -179,12 +179,8 @@ public slots:
 			emit postEventChange(index);
 		} else {
 			// timestamp changed, we need to sort
-			emit preReset();
 			m_events[index] = event.toSensorEvent();
-			std::sort(m_events.begin(), m_events.end(), [](const auto& evt0, const auto& evt1){
-				return (evt1.timestamp > evt0.timestamp);
-			});
-			emit postReset();
+			sort();
 		}
 		return true;
 	}
@@ -207,6 +203,14 @@ public slots:
 			m_events.erase(m_events.begin() + index);
 			emit postEventRemoved();
 		}
+	}
+
+	void sort() {
+		emit preReset();
+		std::sort(m_events.begin(), m_events.end(), [](const auto& evt0, const auto& evt1){
+			return (evt1.timestamp > evt0.timestamp);
+		});
+		emit postReset();
 	}
 
 	// ########

@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # external dependencies
 #######################
 add_subdirectory(lib)
-find_package(Qt5 COMPONENTS Core Quick REQUIRED)
+find_package(Qt5 COMPONENTS Core Quick QuickControls2 Widgets REQUIRED)
 
 # qt settings
 #############
@@ -29,4 +29,4 @@ add_executable(SensorReadoutEditor ${EDITOR_SOURCES} ${EDITOR_HEADERS} qml.qrc $
 
 target_compile_definitions(SensorReadoutEditor
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
-target_link_libraries(SensorReadoutEditor PRIVATE Qt5::Core Qt5::Quick SensorReadoutParser)
+target_link_libraries(SensorReadoutEditor PRIVATE Qt5::Core Qt5::Quick Qt5::QuickControls2 Qt5::Widgets SensorReadoutParser subprocess)

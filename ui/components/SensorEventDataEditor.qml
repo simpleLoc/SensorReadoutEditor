@@ -6,6 +6,8 @@ import SensorReadout 1.0
 import "SensorEvent.js" as SensorEvent
 
 Item {
+    SystemPalette { id: systemPalette; colorGroup: SystemPalette.Active }
+
     property var sensorEvent: null
     property var __parsedEditEvent: new SensorEvent.SensorEvent(sensorEvent)
     property var __parsedEditEventData: __parsedEditEvent.get()
@@ -45,9 +47,10 @@ Item {
             Rectangle {
                 height: eventContentLayout.height
                 width: eventContentLayout.width
+                color: systemPalette.base
                 Row {
                     id: eventContentLayout
-                    Text {
+                    Label {
                         text: modelData.name
                         width: fixedParameterEditor.headerItem.columnWidths[0]
                         padding: 4

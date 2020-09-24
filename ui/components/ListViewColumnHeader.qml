@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 
 Item {
     id: columnHeader
+    SystemPalette { id: systemPalette; colorGroup: SystemPalette.Active }
 
     property list<ListViewColumn> columns
     readonly property int columnCnt: columns.length
@@ -72,17 +73,18 @@ Item {
                 id: eventTypeColumnHeader
                 height: parent.height
                 width: columnHeader.columnWidths[index]
-                color: "lightgray"
+                color: systemPalette.mid
                 Rectangle {
                     id: columnSeparator
                     visible: (index > 0)
                     height: parent.height
                     width: 1
                     anchors.left: parent.left
-                    color: "black"
+                    color: systemPalette.light
                 }
                 Text {
                     text: modelData.text
+                    color: systemPalette.text
                     padding: 5
                     anchors.left: columnSeparator.right
                 }

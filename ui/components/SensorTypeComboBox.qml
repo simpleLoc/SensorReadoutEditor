@@ -9,6 +9,7 @@ ComboBox {
     id: control
     valueRole: "value"
     textRole: "text"
+
     model: ListModel {
         id: sensorTypeModel
     }
@@ -34,10 +35,16 @@ ComboBox {
     }
 
     popup: Popup {
+        SystemPalette { id: systemPalette; colorGroup: SystemPalette.Active }
+
         y: control.height - 1
         width: control.width
         height: implicitContentHeight
         padding: 1
+        background: Rectangle {
+            anchors.fill: parent
+            color: systemPalette.window
+        }
 
         function selectAndClose(sensorType) {
             control.currentSensorType = sensorType;
@@ -109,7 +116,8 @@ ComboBox {
                         }
                     }
 
-                    color: (itemList.currentIndex == index) ? "lightsteelblue" : (popupListItemMouseArea.containsMouse ? "lightblue": "transparent")
+                    property bool isHighlighted: (itemList.currentIndex == index || popupListItemMouseArea.containsMouse)
+                    color: (isHighlighted) ? systemPalette.highlight : systemPalette.base
 
                     Row {
                         id: popupListItemLayout
@@ -117,6 +125,7 @@ ComboBox {
                         padding: 4
                         Text {
                             text: model.text
+                            color: (isHighlighted) ? systemPalette.highlightedText : systemPalette.text
                         }
                     }
                 }

@@ -1,8 +1,8 @@
 import QtQuick 2.15
+import QtQuick.Dialogs 1.2
 import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
-import QtQuick.Dialogs 1.3
 
 import SensorReadout 1.0
 import "components"
@@ -10,14 +10,14 @@ import "components"
 Window {
     id: root
 
+    SystemPalette { id: systemPalette; colorGroup: SystemPalette.Active }
     property bool hasChanges: false
 
     width: 640
     height: 480
     visible: true
     title: qsTr("SensorReadout Editor") + (hasChanges ? "*" : "")
-
-
+    color: systemPalette.window
 
     function insertNewEventAtIdx(index) {
         var timestamp = 0;
@@ -60,7 +60,6 @@ Window {
         }
     }
 
-
     FileDialog {
         id: openFileDialog
         title: "Open a SensorReadout file"
@@ -101,7 +100,8 @@ Window {
         anchors.rightMargin: 0
         anchors.top: root.top
 
-        Row {
+        RowLayout {
+            anchors.fill: parent
             ToolButton {
                 id: openFileButton
                 text: qsTr("Open")
@@ -154,6 +154,21 @@ Window {
                     root.hasChanges = true;
                 }
             }
+            ToolSeparator {}
+            ToolButton {
+                id: deviceDownloadButton
+                enabled: backend.settings.isConfigured
+                text: qsTr("Device download")
+                onClicked: deviceWindow.show()
+            }
+            LayoutStretcher {}
+            ToolButton {
+                id: configureButton
+                text: qsTr("Configuration")
+                onClicked: {
+                    configurationDialog.open();
+                }
+            }
         }
     }
 
@@ -166,6 +181,7 @@ Window {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 0
         width: 250
+        color: systemPalette.window
 
         ColumnLayout {
             anchors.fill: parent
@@ -185,7 +201,7 @@ Window {
                             text: "Prev"
                             onClicked: jumpToPreviousEventOfType(jumpToSensorTypeCombo.currentSensorType)
                         }
-                        Rectangle { Layout.fillWidth: true; Layout.fillHeight: true; }
+                        LayoutStretcher{}
                         Button {
                             text: "Next"
                             onClicked: jumpToNextEventOfType(jumpToSensorTypeCombo.currentSensorType)
@@ -193,10 +209,20 @@ Window {
                     }
                 }
             }
-            Rectangle {
+            GroupBox {
                 Layout.fillWidth: true
-                Layout.fillHeight: true
+                title: qsTr("File Fixes")
+                Button {
+                    id: enforceSortButton
+                    text: "Sort"
+                    onClicked: {
+                        hasChanges = true;
+                        backend.events.sort();
+                    }
+                }
             }
+
+            LayoutStretcher{}
         }
     }
     Rectangle {
@@ -208,6 +234,7 @@ Window {
         anchors.top: toolBar.bottom
         anchors.topMargin: 0
         height: 1.0 * (parent.height - toolBar.height)
+        color: systemPalette.window
 
         ListView {
             id: eventList
@@ -243,11 +270,9 @@ Window {
                     height: eventContentLayout.height
                     width: eventContentLayout.width
                     z: 5
-                    color: {
-                        if(eventItemMouseArea.containsPress) { return "lightsteelblue"; }
-                        if(eventList.currentIndex == index) { return "#8fbee6"; }
-                        return (eventItemMouseArea.containsMouse) ? "lightblue" : "white";
-                    }
+                    property bool isHighlighted: (eventItemMouseArea.containsPress || eventList.currentIndex == index || eventItemMouseArea.containsMouse)
+                    color: (isHighlighted) ? systemPalette.highlight : systemPalette.base
+
                     Row {
                         id: eventContentLayout
                         RowLayout {
@@ -259,13 +284,14 @@ Window {
                                 bottomPadding: 4
                                 leftPadding: 4
                                 rightPadding: 2
+                                color: (isHighlighted) ? systemPalette.highlightedText : systemPalette.text
                             }
                             Text {
                                 Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignRight
                                 text: "(" + SensorType.toName(model.type) + ")"
                                 elide: Text.ElideLeft
-                                color: "gray"
+                                color: systemPalette.light
                             }
                         }
                         RowLayout {
@@ -277,13 +303,14 @@ Window {
                                 bottomPadding: 4
                                 leftPadding: 4
                                 rightPadding: 2
+                                color: (isHighlighted) ? systemPalette.highlightedText : systemPalette.text
                             }
                             Text {
                                 Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignRight
                                 text: "(" + toTimeString(model.timestamp) + ")"
                                 elide: Text.ElideRight
-                                color: "gray"
+                                color: systemPalette.light
                                 function padDigits(number, digits) {
                                     return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
                                 }
@@ -301,6 +328,7 @@ Window {
                             text: model.dataRaw;
                             width: eventList.headerItem.columnWidths[2]
                             padding: 4
+                            color: (isHighlighted) ? systemPalette.highlightedText : systemPalette.text
                         }
                     }
 
@@ -366,6 +394,13 @@ Window {
     }
 
 
+    DeviceWindow {
+        id: deviceWindow
+        settings: backend.settings
+        x: root.x
+        y: root.y
+    }
+
     SensorEventEditDialog {
         id: editingDialog
         width: Math.max(parent.width / 2, 350)
@@ -380,12 +415,23 @@ Window {
         title: "An error occured"
     }
 
+    ConfigurationDialog {
+        id: configurationDialog
+        width: 0.75 * parent.width
+        height: 0.75 * parent.height
+        anchors.centerIn: parent
+        settings: backend.settings
+    }
+
     // init
     Component.onCompleted: {
         backend.onError.connect(function(errorMessage) {
             errorDialog.text = errorMessage;
             errorDialog.open();
         });
+        if(!backend.settings.isConfigured) {
+            configurationDialog.open();
+        }
     }
 
 }
