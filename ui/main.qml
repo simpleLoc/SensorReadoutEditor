@@ -6,6 +6,7 @@ import QtQuick.Layouts 1.11
 
 import SensorReadout 1.0
 import "components"
+import "Helper.js" as Helper
 
 Window {
     id: root
@@ -308,20 +309,9 @@ Window {
                             Text {
                                 Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignRight
-                                text: "(" + toTimeString(model.timestamp) + ")"
+                                text: "(" + Helper.nsTimestampToTimeString(model.timestamp) + ")"
                                 elide: Text.ElideRight
                                 color: systemPalette.light
-                                function padDigits(number, digits) {
-                                    return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
-                                }
-                                function toTimeString(timestamp) {
-                                    var minutes = timestamp / 60000000000;
-                                    var fullMinutes = Math.trunc(minutes);
-                                    var seconds = (minutes - fullMinutes) * 60;
-                                    var fullSeconds = Math.trunc(seconds);
-                                    var fullMilliseconds = Math.trunc((seconds - fullSeconds) * 1000);
-                                    return padDigits(fullMinutes, 2) + ":" + padDigits(fullSeconds, 2) + "." + padDigits(fullMilliseconds, 4);
-                                }
                             }
                         }
                         Text {

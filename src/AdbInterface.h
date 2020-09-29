@@ -9,24 +9,11 @@
 using subprocess::PipeOption;
 using subprocess::RunBuilder;
 
-// TODO: doesn't work for some reason.
-// See: https://stackoverflow.com/questions/63968813/why-do-qprocess-qt-5-15-1-and-gdb-lead-to-missing-symbols
-//
-//		QProcess process;
-//		process.start(exePath, {"version"});
-//		process.setReadChannel(QProcess::StandardOutput);
-//		if(!process.waitForStarted()) { return {}; }
-//		process.closeWriteChannel();
-//		if(!process.waitForFinished(2000) || process.exitStatus() == QProcess::CrashExit) {
-//			process.kill();
-//			return {};
-//		}
-//		auto versionInfo = QString::fromUtf8(process.readLine());
-//		if(!versionInfo.startsWith(VERSION_PREFIX)) {
-//			return {};
-//		}
-//		return versionInfo.left(strlen(VERSION_PREFIX) + 1);
-
+struct FileInfo {
+	size_t size;
+	std::string filePath;
+	std::string fileDate;
+};
 
 class AdbInterface {
 
@@ -78,47 +65,55 @@ public:
 		}
 	}
 
-	static std::optional<std::vector<std::string>> listFiles(const std::string& exePath, const std::string& device, const std::string& pattern) {
+	static std::optional<std::vector<FileInfo>> listFiles(const std::string& exePath, const std::string& device, const std::string& pattern) {
 		static const std::string LISTING_START = "List of devices attached";
 
 		try {
 			auto process = subprocess::run(
-				{exePath, "-s", device, "shell", "ls", pattern},
+				{exePath, "-s", device, "shell", "ls", "-l", pattern},
 				RunBuilder().cout(PipeOption::pipe)
 							.check(true) // expect success
 			);
 			std::istringstream processOutput(process.cout);
 			std::string lineBuffer;
 			//collect files
-			std::vector<std::string> filePaths;
+			std::vector<FileInfo> result;
 			while(std::getline(processOutput, lineBuffer) && lineBuffer != "") {
-				filePaths.push_back(lineBuffer);
+				std::istringstream lsLine(lineBuffer);
+				std::string partBuffer;
+				FileInfo fileInfo;
+
+				if(!std::getline(lsLine, partBuffer, ' ')) { continue; }
+				if(!std::getline(lsLine, partBuffer, ' ')) { continue; }
+				if(!std::getline(lsLine, partBuffer, ' ')) { continue; }
+				if(!std::getline(lsLine, partBuffer, ' ')) { continue; }
+				// file size
+				lsLine >> fileInfo.size;
+				lsLine.seekg(1, std::ios::cur); // skip space char after fileSize
+				if(!std::getline(lsLine, fileInfo.fileDate, ' ')) { continue; }
+				if(!std::getline(lsLine, partBuffer, ' ')) { continue; }
+				fileInfo.fileDate += " " + partBuffer;
+				// interpret remaining data as fileName
+				if(!std::getline(lsLine, fileInfo.filePath)) { continue; }
+
+				result.push_back(fileInfo);
 			}
-			return filePaths;
+			return result;
 		} catch (...) {
 			return {};
 		}
 	}
 
-
-//	static std::optional<std::vector<std::string>> getFileListing(const std::string& path) {
-//		try {
-//			auto process = subprocess::run(
-//				{exePath, "version"},
-//				RunBuilder().cout(PipeOption::pipe)
-//							.check(true) // expect success
-//			);
-//			std::istringstream processOutput(process.cout);
-//			std::string versionInfo;
-//			if(!std::getline(processOutput, versionInfo)) { return {}; }
-//			// try to parse adb's output
-//			if(versionInfo.rfind(VERSION_PREFIX, 0) != 0) {
-//				return {};
-//			}
-//			return versionInfo.substr(strlen(VERSION_PREFIX) + 1);
-//		} catch (...) {
-//			return {};
-//		}
-//	}
+	static void deleteFile(const std::string& exePath, const std::string& device, const std::string& filePath) {
+		try {
+			auto process = subprocess::run(
+				{exePath, "-s", device, "shell", "rm", filePath},
+				RunBuilder().cout(PipeOption::pipe)
+							.check(true) // expect success
+			);
+		} catch (subprocess::CalledProcessError& err) {
+			throw std::runtime_error(err.what());
+		}
+	}
 
 };

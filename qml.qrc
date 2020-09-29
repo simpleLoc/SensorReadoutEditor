@@ -10,5 +10,6 @@
         <file>ui/components/LayoutStretcher.qml</file>
         <file>ui/ConfigurationDialog.qml</file>
         <file>ui/DeviceWindow.qml</file>
+        <file>ui/Helper.js</file>
     </qresource>
 </RCC>
