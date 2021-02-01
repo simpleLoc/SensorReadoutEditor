@@ -11,5 +11,7 @@
         <file>ui/ConfigurationDialog.qml</file>
         <file>ui/DeviceWindow.qml</file>
         <file>ui/Helper.js</file>
+        <file>ui/drop.svg</file>
+        <file>ui/components/Icon.qml</file>
     </qresource>
 </RCC>

@@ -61,18 +61,21 @@ Window {
         }
     }
 
+    function openFile(url) {
+        var path = url
+        if(path.startsWith("file:///")) {
+            path = path.substring(7);
+        }
+        backend.openFile(path);
+        hasChanges = false;
+    }
+
     FileDialog {
         id: openFileDialog
         title: "Open a SensorReadout file"
         folder: shortcuts.home
         nameFilters: ["SensorReadout files (*.csv)"]
-        onAccepted: {
-            var path = fileUrl.toString();
-            if(path.startsWith("file:///")) {
-                path = path.substring(7);
-            }
-            backend.openFile(path);
-        }
+        onAccepted: openFile(fileUrl.toString())
     }
     FileDialog {
         id: saveAsFileDialog
@@ -246,6 +249,33 @@ Window {
             }
 
             LayoutStretcher{}
+            Rectangle {
+                Layout.fillHeight: true
+                Layout.fillWidth: true
+                Layout.maximumHeight: 200
+                border.width: 2
+                border.color: (openFileDropArea.containsDrag) ? "lightblue" : "#555555"
+                color: "transparent"
+                radius: 4
+                DropArea {
+                    id: openFileDropArea
+                    anchors.fill: parent
+                    Icon {
+                        anchors.fill: parent
+                        anchors.margins: 0.25 * Math.min(openFileDropArea.width, openFileDropArea.height)
+                        iconSource: "qrc:/ui/drop.svg"
+                        iconColor: "white"
+                    }
+                    onEntered: {
+                        if(drag.hasUrls) {
+                            drag.accept();
+                        }
+                    }
+                    onDropped: {
+                        openFile(drop.urls[0]);
+                    }
+                }
+            }
         }
     }
     Rectangle {

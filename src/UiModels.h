@@ -207,7 +207,7 @@ public slots:
 
 	void sort() {
 		emit preReset();
-		std::sort(m_events.begin(), m_events.end(), [](const auto& evt0, const auto& evt1){
+		std::stable_sort(m_events.begin(), m_events.end(), [](const auto& evt0, const auto& evt1){
 			return (evt1.timestamp > evt0.timestamp);
 		});
 		emit postReset();
