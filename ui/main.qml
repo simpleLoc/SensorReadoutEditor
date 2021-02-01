@@ -213,12 +213,34 @@ Window {
             GroupBox {
                 Layout.fillWidth: true
                 title: qsTr("File Fixes")
-                Button {
-                    id: enforceSortButton
-                    text: "Sort"
-                    onClicked: {
-                        hasChanges = true;
-                        backend.events.sort();
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    Button {
+                        id: enforceSortButton
+                        Layout.fillWidth: true
+                        text: "Sort"
+                        hoverEnabled: true
+                        ToolTip.visible: hovered
+                        ToolTip.delay: 750
+                        ToolTip.text: "Sort all events in ascending timestamp order."
+                        onClicked: {
+                            hasChanges = true;
+                            backend.events.sort();
+                        }
+                    }
+                    Button {
+                        id: fixGtNumberingButton
+                        Layout.fillWidth: true
+                        text: "GT-Point Numbering"
+                        hoverEnabled: true
+                        ToolTip.visible: hovered
+                        ToolTip.delay: 750
+                        ToolTip.text: "Re-Assign correctly ordered (ascending) IDs to all GroundTruth events, starting at 0."
+                        onClicked: {
+                            hasChanges = true;
+                            backend.events.fixGroundTruthNumbering();
+                        }
                     }
                 }
             }

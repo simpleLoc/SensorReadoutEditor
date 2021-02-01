@@ -213,6 +213,18 @@ public slots:
 		emit postReset();
 	}
 
+	void fixGroundTruthNumbering() {
+		uint64_t gtPointIdx = 0;
+		for(size_t i = 0; i < m_events.size(); ++i) {
+			srp::RawSensorEvent& event = m_events[i];
+			if(event.eventId == srp::EVENTID_GROUND_TRUTH) {
+				emit preEventChange(i);
+				event.parameterString = std::to_string(gtPointIdx++);
+				emit postEventChange(i);
+			}
+		}
+	}
+
 	// ########
 	// # Finding / Filtering
 	// ########
