@@ -304,8 +304,8 @@ Window {
                 width: parent.width
                 z: 10
                 columns: [
-                    ListViewColumn { text: "EventType"; minWidth: 50; maxWidth: 175 },
-                    ListViewColumn { text: "Timestamp"; minWidth: 100; maxWidth: 175 },
+                    ListViewColumn { text: "EventType"; minWidth: 50; maxWidth: 215 },
+                    ListViewColumn { text: "Timestamp"; minWidth: 100; maxWidth: 215 },
                     ListViewColumn { text: "Data" }
                 ]
             }
