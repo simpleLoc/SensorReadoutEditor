@@ -13,11 +13,12 @@ Window {
 
     SystemPalette { id: systemPalette; colorGroup: SystemPalette.Active }
     property bool hasChanges: false
+    property string titleFilePath: ""
 
     width: 640
     height: 480
     visible: true
-    title: qsTr("SensorReadout Editor") + (hasChanges ? "*" : "")
+    title: qsTr("SensorReadout Editor") + (titleFilePath != "" ? " - "+titleFilePath : "") + (hasChanges ? " *" : "")
     color: systemPalette.window
 
     function insertNewEventAtIdx(index) {
@@ -67,6 +68,7 @@ Window {
             path = path.substring(7);
         }
         backend.openFile(path);
+        titleFilePath = path;
         hasChanges = false;
     }
 
