@@ -3,6 +3,7 @@ import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQml.Models 2.15
+import QtQuick.Dialogs 1.3
 
 import SensorReadout 1.0
 import SortFilterProxyModel 0.2
@@ -52,7 +53,9 @@ Window {
 
     function __updateFileListing() {
         if(deviceModel.count > 0) {
-            var fileList = adbController.listFiles("/storage/emulated/0/Android/data/de.fhws.indoor.sensorreadout/files/Documents/sensorOutFiles/*.csv");
+            var fileList1 = adbController.listFiles("/storage/emulated/0/Android/data/de.fhws.indoor.sensorreadout/files/Documents/sensorOutFiles/*.csv");
+            var fileList2 = adbController.listFiles("/storage/*/Android/data/de.fhws.indoor.sensorreadout/files/Documents/sensorOutFiles/*.csv");
+            var fileList = [].concat(fileList1).concat(fileList2);
             deviceRecordingModel.clear();
             for(var i in fileList) {
                 deviceRecordingModel.append(fileList[i]);
@@ -66,7 +69,24 @@ Window {
     }
 
     function __downloadFile(filePath) {
-        console.log("download: " + filePath);
+        downloadSaveFolderDialog.open();
+        let acceptHandler = function() {
+            let folder = downloadSaveFolderDialog.folder.toString();
+            if(!folder.startsWith("file://")) {
+                throw new Error("Invalid Folder URL");
+            }
+            folder = folder.substr(7);
+
+            adbController.downloadFile(folder, [filePath]);
+            downloadSaveFolderDialog.accepted.disconnect(acceptHandler);
+        };
+        downloadSaveFolderDialog.accepted.connect(acceptHandler);
+    }
+
+    FileDialog {
+        id: downloadSaveFolderDialog
+        selectFolder: true
+        selectExisting: true
     }
 
     ColumnLayout {
@@ -123,7 +143,7 @@ Window {
             }
             currentIndex: -1
             delegate: Control {
-                width: parent.width
+                width: ListView.view.width
                 padding: 5
                 hoverEnabled: true
 

@@ -1,9 +1,12 @@
 #pragma once
 
 #include <string>
+#include <fstream>
 
+#include <QFileInfo>
 #include <QObject>
 #include <QProcess>
+#include <QStringList>
 
 #include "AppSettings.h"
 #include "AdbInterface.h"
@@ -97,6 +100,24 @@ public slots:
 				m_settings->adbExecutable().toStdString(),
 				m_device.toStdString(),
 				filePath.toStdString());
+		} catch (std::runtime_error& e) {
+			//TODO: handle error (send to gui?)
+		}
+	}
+
+	void downloadFile(const QString& dstDir, const QStringList& filePaths) {
+		try {
+			for(const auto& filePath : filePaths) {
+				std::string fileName = QFileInfo(filePath).fileName().toStdString();
+				std::string content = AdbInterface::downloadFile(
+					m_settings->adbExecutable().toStdString(),
+					m_device.toStdString(),
+					filePath.toStdString());
+				std::ofstream outFile(dstDir.toStdString() + "/" + fileName);
+				if(outFile.is_open()) {
+					outFile.write(content.data(), content.length());
+				}
+			}
 		} catch (std::runtime_error& e) {
 			//TODO: handle error (send to gui?)
 		}

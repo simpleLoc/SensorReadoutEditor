@@ -353,7 +353,7 @@ Window {
                             width: eventList.headerItem.columnWidths[1]
                             clip: true
                             Text {
-                                text: model.timestamp
+                                text: model.timestamp.toLocaleString('fullwide', { useGrouping: false })
                                 topPadding: 4
                                 bottomPadding: 4
                                 leftPadding: 4

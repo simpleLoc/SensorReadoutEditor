@@ -99,6 +99,11 @@ __PARSE_DEFINITIONS[SensorReadout.SensorType.HeartRate] = new FixedParameterPars
 __PARSE_DEFINITIONS[SensorReadout.SensorType.GPS] = new NotImplementedParameterParser(); //TODO: implement
 __PARSE_DEFINITIONS[SensorReadout.SensorType.WifiRTT] = new NotImplementedParameterParser(); //TODO: implement
 __PARSE_DEFINITIONS[SensorReadout.SensorType.GameRotationVector] = new FixedParameterParser([_fparam("x"), _fparam("y"), _fparam("z")]);
+__PARSE_DEFINITIONS[SensorReadout.SensorType.EddystoneUID] = new NotImplementedParameterParser(); //TODO: implement
+__PARSE_DEFINITIONS[SensorReadout.SensorType.DecawaveUWB] = new NotImplementedParameterParser(); //TODO: implement
+__PARSE_DEFINITIONS[SensorReadout.SensorType.StepDetector] = new FixedParameterParser([_fparam("probability")]);
+__PARSE_DEFINITIONS[SensorReadout.SensorType.HeadingChange] = new FixedParameterParser([_fparam("headingChangeRad")]);
+
 __PARSE_DEFINITIONS[SensorReadout.SensorType.PedestrianActivity] = new FixedParameterParser([_fparam("activityName"), _fparam("activityId")]);
 __PARSE_DEFINITIONS[SensorReadout.SensorType.GroundTruth] = new FixedParameterParser([_iparam("groundTruth")]);
 __PARSE_DEFINITIONS[SensorReadout.SensorType.GroundTruthPath] = new FixedParameterParser([_iparam("pathId"), _iparam("groundTruthPointCnt")]);

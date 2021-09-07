@@ -57,7 +57,10 @@ public:
 			std::vector<std::string> deviceIds;
 			while(std::getline(processOutput, lineBuffer) && lineBuffer != "") {
 				if(lineBuffer.length() < 10) { return {}; }
-				deviceIds.push_back(lineBuffer.substr(0, 10));
+				auto endIdx = lineBuffer.find_first_of("\t");
+				if(endIdx > 0) {
+					deviceIds.push_back(lineBuffer.substr(0, endIdx));
+				}
 			}
 			return deviceIds;
 		} catch (...) {
@@ -111,6 +114,19 @@ public:
 				RunBuilder().cout(PipeOption::pipe)
 							.check(true) // expect success
 			);
+		} catch (subprocess::CalledProcessError& err) {
+			throw std::runtime_error(err.what());
+		}
+	}
+
+	static std::string downloadFile(const std::string& exePath, const std::string& device, const std::string& filePath) {
+		try {
+			auto process = subprocess::run(
+				{exePath, "-s", device, "shell", "cat", filePath},
+				RunBuilder().cout(PipeOption::pipe)
+							.check(true) // expect success
+			);
+			return process.cout;
 		} catch (subprocess::CalledProcessError& err) {
 			throw std::runtime_error(err.what());
 		}

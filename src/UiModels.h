@@ -37,6 +37,11 @@ public:
 		GPS = srp::EVENTID_GPS,
 		WifiRTT = srp::EVENTID_WIFIRTT,
 		GameRotationVector = srp::EVENTID_GAME_ROTATION_VECTOR,
+		EddystoneUID = srp::EVENTID_EDDYSTONE_UID,
+		DecawaveUWB = srp::EVENTID_DECAWAVE_UWB,
+		StepDetector = srp::EVENTID_STEP_DETECTOR,
+		HeadingChange = srp::EVENTID_HEADING_CHANGE,
+
 		PedestrianActivity = srp::EVENTID_PEDESTRIAN_ACTIVITY,
 		GroundTruth = srp::EVENTID_GROUND_TRUTH,
 		GroundTruthPath = srp::EVENTID_GROUND_TRUTH_PATH,
