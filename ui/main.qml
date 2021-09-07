@@ -4,6 +4,7 @@ import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.11
 
+import SortFilterProxyModel 0.2
 import SensorReadout 1.0
 import "components"
 import "Helper.js" as Helper
@@ -193,6 +194,32 @@ Window {
             anchors.fill: parent
             GroupBox {
                 Layout.fillWidth: true
+                Layout.topMargin: 7
+                title: qsTr("View")
+                ColumnLayout {
+                    width: parent.width
+                    TextField {
+                        Layout.fillWidth: true
+                        id: eventFilterTxt
+                        placeholderText: qsTr("Event Filter")
+                        color: systemPalette.text
+                        selectByMouse: true
+                    }
+                    TextField {
+                        Layout.fillWidth: true
+                        id: timestampFilterTxt
+                        placeholderText: qsTr("Timestamp Filter")
+                        color: systemPalette.text
+                        selectByMouse: true
+                    }
+                }
+            }
+            ToolSeparator {
+                Layout.fillWidth: true
+                orientation: Qt.Horizontal
+            }
+            GroupBox {
+                Layout.fillWidth: true
                 title: qsTr("Jump to next...")
                 ColumnLayout {
                     width: parent.width
@@ -316,8 +343,33 @@ Window {
                 minimumSize: 0.1
             }
 
-            model: EventListModel {
-                eventList: backend.events
+            model: SortFilterProxyModel {
+                sourceModel: EventListModel {
+                    eventList: backend.events
+                }
+                proxyRoles: [
+                    ExpressionRole {
+                        name: "timestampStr"
+                        expression: model.timestamp.toLocaleString('fullwide', { useGrouping: false })
+                    }
+                ]
+                filters: [
+                    ExpressionFilter {
+                        expression: {
+                            let filterStr = eventFilterTxt.displayText.toLowerCase();
+                            if(!filterStr) { return true; }
+                            return (model.sensorType.toString().indexOf(filterStr) !== -1) || (model.sensorTypeName.toLowerCase().indexOf(filterStr) !== -1);
+                        }
+                    },
+                    ExpressionFilter {
+                        expression: {
+                            let filterStr = timestampFilterTxt.displayText;
+                            if(!filterStr) { return true; }
+                            return model.timestampStr.indexOf(filterStr) !== -1;
+                        }
+                    }
+
+                ]
             }
             Component {
                 id: eventDelegate
@@ -325,7 +377,7 @@ Window {
                     height: eventContentLayout.height
                     width: eventContentLayout.width
                     z: 5
-                    property bool isHighlighted: (eventItemMouseArea.containsPress || eventList.currentIndex == index || eventItemMouseArea.containsMouse)
+                    property bool isHighlighted: (eventItemMouseArea.containsPress || eventList.currentIndex === index || eventItemMouseArea.containsMouse)
                     color: (isHighlighted) ? systemPalette.highlight : systemPalette.base
 
                     Row {
@@ -344,7 +396,7 @@ Window {
                             Text {
                                 Layout.fillWidth: true
                                 horizontalAlignment: Text.AlignRight
-                                text: "(" + SensorType.toName(model.type) + ")"
+                                text: "(" + model.typeName + ")"
                                 elide: Text.ElideLeft
                                 color: systemPalette.light
                             }

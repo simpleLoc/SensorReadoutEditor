@@ -10,7 +10,11 @@ class EventListModel : public QAbstractListModel {
 	Q_PROPERTY(EventList* eventList READ eventList WRITE setEventList NOTIFY eventListChanged)
 
 	enum {
-		DataRole = Qt::UserRole
+		DataRole = Qt::UserRole,
+		SensorTypeRole,
+		SensorTyeNameRole,
+		TimestampRole,
+		DataRawRole
 	};
 
 private:
@@ -62,8 +66,13 @@ public: // Interface API
 	QVariant data(const QModelIndex &index, int role) const override {
 		assertEventListNotNull();
 		if(!index.isValid()) { return QVariant(); }
-		if(role == DataRole) {
-			return QVariant::fromValue(m_eventList->getEventAt(index.row()));
+		const auto& evt = m_eventList->getEventAt(index.row());
+		switch(role) {
+			case DataRole: return QVariant::fromValue(evt);
+			case SensorTypeRole: return evt.type();
+			case SensorTyeNameRole: return evt.typeName();
+			case TimestampRole: return evt.timestamp();
+			case DataRawRole: return evt.dataRaw();
 		}
 		return QVariant();
 	}
@@ -80,7 +89,11 @@ public: // Interface API
 	}
 	QHash<int, QByteArray> roleNames() const override {
 		return {
-			{DataRole, QByteArray("model")}
+			{DataRole, QByteArray("model")},
+			{SensorTypeRole, QByteArray("sensorType")},
+			{SensorTyeNameRole, QByteArray("sensorTypeName")},
+			{TimestampRole, QByteArray("timestamp")},
+			{DataRawRole, QByteArray("dataRaw")}
 		};
 	}
 };

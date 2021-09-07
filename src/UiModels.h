@@ -57,7 +57,7 @@ public:
 		}
 	}
 
-	Q_INVOKABLE QString toName(Value value) const {
+	static Q_INVOKABLE QString toName(Value value) {
 		return QMetaEnum::fromType<Value>().valueToKey(value);
 	}
 
@@ -75,6 +75,7 @@ private:
 class EventUiModel {
 	Q_GADGET
 	Q_PROPERTY(SensorType::Value type READ type WRITE setType)
+	Q_PROPERTY(QString typeName READ typeName)
 	Q_PROPERTY(quint64 timestamp READ timestamp WRITE setTimestamp)
 	Q_PROPERTY(QString dataRaw READ dataRaw WRITE setDataRaw)
 
@@ -92,6 +93,7 @@ public:
 	}
 
 	SensorType::Value type() const { return m_type; }
+	QString typeName() const { return SensorType::toName(m_type); }
 	quint64 timestamp() const { return m_timestamp; }
 	QString dataRaw() const { return m_dataRaw; }
 
