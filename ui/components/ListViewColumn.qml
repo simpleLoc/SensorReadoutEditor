@@ -1,6 +1,6 @@
 import QtQuick 2.0
 
-Item {
+QtObject {
     property string text: ""
     property int fixedWidth: -1
     property real relativeWidth: -1

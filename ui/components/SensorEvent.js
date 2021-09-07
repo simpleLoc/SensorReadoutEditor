@@ -1,15 +1,56 @@
 .pragma library
 .import SensorReadout 1.0 as SensorReadout
 
-function _param(parameterType, parameterName) {
-    return {
-        type: parameterName,
-        name: parameterName
-    };
+class Parameter {
+    constructor(parameterType, parameterName, parameterArgs) {
+        this.type = parameterType;
+        this.name = parameterName;
+        this.args = parameterArgs;
+    }
+    addTo(dstMap, values, idx) { console.assert(false); }
+    serializeTo(dstArr, param) { console.assert(false); }
 }
-function _fparam(name) { return _param("float", name); }
-function _iparam(name) { return _param("integer", name); }
-function _sparam(name) { return _param("string", name); }
+class SingleValueParameter extends Parameter {
+    constructor(parameterType, parameterName, parameterArgs) { super(parameterType, parameterName, parameterArgs); }
+    addTo(dstMap, values, idx) {
+        dstMap.push({ type: this.type, name: this.name, value: values[idx] });
+        return (idx + 1);
+    }
+    serializeTo(dstArr, param) { dstArr.push(param.value); }
+}
+class FParameter extends SingleValueParameter { constructor(parameterName) { super("float", parameterName, null); } }
+class IParameter extends SingleValueParameter { constructor(parameterName) { super("integer", parameterName, null); } }
+class SParameter extends SingleValueParameter { constructor(parameterName) { super("string", parameterName, null); } }
+class TableParameter extends Parameter {
+    constructor(parameterName, columnParameters) { super("table", parameterName, columnParameters); }
+    addTo(dstMap, values, idx) {
+        let param = { type: this.type, name: this.name, columns: [], value: [] };
+        param.columns = this.args.map((a) => a.name);
+        while(idx < values.length) {
+            console.assert(values.length - idx >= this.args.length);
+            let valueRow = [];
+            for(let pidx = 0; pidx < this.args.length; ++pidx) {
+                idx = this.args[pidx].addTo(valueRow, values, idx);
+            }
+            param.value.push(valueRow);
+        }
+        dstMap.push(param);
+        return values.length;
+    }
+    serializeTo(dstArr, param) {
+        for(let r = 0; r < param.value.length; ++r) {
+            for(let c = 0; c < this.args.length; ++c) {
+                this.args[c].serializeTo(dstArr, param.value[r][c]);
+            }
+        }
+    }
+}
+
+
+function _fparam(name) { return new FParameter(name); }
+function _iparam(name) { return new IParameter(name); }
+function _sparam(name) { return new SParameter(name); }
+function _tableparam(name, fieldArray) { return new TableParameter(name, fieldArray); }
 
 /**
   * Fixed parameter parser, for events with a fixed amount and type of parameters
@@ -21,17 +62,18 @@ class FixedParameterParser {
     parse(parameterString) {
         var args = parameterString.split(';');
         var resultMap = [];
-        for(var i in this.mapArray) {
-            var parameter = this.mapArray[i];
-            resultMap.push({ type: parameter.type, name: parameter.name, value: args[i] })
+        let argIdx = 0;
+        for(var parameter of this.mapArray) {
+            argIdx = parameter.addTo(resultMap, args, argIdx);
         }
         return {type: "fixedParameter", value: resultMap};
     }
     serialize(parameterMap) {
         console.assert(parameterMap.type === "fixedParameter");
-        var args = parameterMap.value.map(function(parameter) {
-            return parameter.value;
-        });
+        let args = [];
+        for(let i = 0; i < this.mapArray.length; ++i) {
+            this.mapArray[i].serializeTo(args, parameterMap.value[i]);
+        }
         return args.join(';');
     }
 }
@@ -100,7 +142,10 @@ __PARSE_DEFINITIONS[SensorReadout.SensorType.GPS] = new NotImplementedParameterP
 __PARSE_DEFINITIONS[SensorReadout.SensorType.WifiRTT] = new NotImplementedParameterParser(); //TODO: implement
 __PARSE_DEFINITIONS[SensorReadout.SensorType.GameRotationVector] = new FixedParameterParser([_fparam("x"), _fparam("y"), _fparam("z")]);
 __PARSE_DEFINITIONS[SensorReadout.SensorType.EddystoneUID] = new NotImplementedParameterParser(); //TODO: implement
-__PARSE_DEFINITIONS[SensorReadout.SensorType.DecawaveUWB] = new NotImplementedParameterParser(); //TODO: implement
+__PARSE_DEFINITIONS[SensorReadout.SensorType.DecawaveUWB] = new FixedParameterParser([
+    _fparam("x"), _fparam("y"), _fparam("z"), _iparam("quality"),
+    _tableparam("ranges", [_iparam("anchorId"), _iparam("distanceMM"), _iparam("quality")])
+]);
 __PARSE_DEFINITIONS[SensorReadout.SensorType.StepDetector] = new FixedParameterParser([_fparam("probability")]);
 __PARSE_DEFINITIONS[SensorReadout.SensorType.HeadingChange] = new FixedParameterParser([_fparam("headingChangeRad")]);
 

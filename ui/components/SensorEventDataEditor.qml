@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.12
+import Qt.labs.qmlmodels 1.0
 
 import SensorReadout 1.0
 import "SensorEvent.js" as SensorEvent
@@ -22,6 +23,109 @@ Item {
         sensorEvent.dataRaw = __parsedEditEvent.toRawData();
     }
 
+    Component {
+        id: parameterEditorFloat
+
+        TextField {
+            selectByMouse: true
+            width: parent.width
+            padding: 4
+            text: parameterModel.value
+            onEditingFinished: __applyChange()
+            onTextEdited: {
+                //__parsedEditEventData.value[modelIndex].value = text
+                parameterModel.value = text;
+            }
+        }
+    }
+    Component {
+        id: parameterEditorInteger
+
+        TextField {
+            selectByMouse: true
+            width: parent.width
+            padding: 4
+            text: parameterModel.value
+            onEditingFinished: __applyChange()
+            onTextEdited: {
+                parameterModel.value = text;
+            }
+        }
+    }
+    Component {
+        id: parameterEditorString
+
+        TextField {
+            selectByMouse: true
+            width: parent.width
+            padding: 4
+            text: parameterModel.value
+            onEditingFinished: __applyChange()
+            onTextEdited: {
+                parameterModel.value = text;
+            }
+        }
+    }
+    Component {
+        id: parameterEditorTable
+        ListView {
+            id: tableEditListView
+            // bind modelIndex to a property with another name, because we need to
+            // access it in the item delegate, and that defines a modelIndex property itself,
+            // shadowing the one accessible here.
+            property int modelFieldIndex: modelIndex
+
+            implicitHeight: implicitContentHeight
+            header: ListViewColumnHeader {
+                id: parameterEditorTableHeader
+                height: 25
+                width: parent.width
+                columns: {
+                    let columns = [];
+                    for(let columnName of parameterModel.columns) {
+                        let column = Qt.createQmlObject("ListViewColumn {}", parameterEditorTableHeader, columnName);
+                        column.text = columnName;
+                        columns.push(column);
+                    }
+                    return columns;
+                }
+            }
+
+            // array of arrays:
+            // [[row0], [row1], [col0row2, col1row2, col2row2]]
+            model: parameterModel.value
+            Component {
+                id: parameterEditorTableDelegate
+                RowLayout {
+                    id: parmeterEditorTableRowLayout
+                    property int rowIndex: index
+
+                    width: ListView.width
+                    spacing: 0
+                    Repeater { // repeat columns
+                        model: modelData
+                        Loader {
+                            Layout.preferredWidth: tableEditListView.headerItem.columnWidths[index]
+                            // properties to forward to the editor:
+                            // this property binding is so complicated, because we need to pass it by-reference instead of by-value
+                            property var parameterModel: __parsedEditEventData.value[modelFieldIndex].value[rowIndex][index]
+                            property int modelIndex: index;
+                            sourceComponent: {
+                                switch(modelData.type) {
+                                    case "float": return parameterEditorFloat;
+                                    case "integer": return parameterEditorInteger;
+                                    case "string": return parameterEditorString;
+                                }
+                                return null;
+                            }
+                        }
+                    }
+                }
+            }
+            delegate: parameterEditorTableDelegate
+        }
+    }
+
     // +++
     // + FixedParameter
     // +++
@@ -34,7 +138,7 @@ Item {
 
         header: ListViewColumnHeader {
             height: 25
-            width: fixedParameterEditor.width
+            width: parent.width
             columns: [
                 ListViewColumn { text: "Parameter"; fixedWidth: 125 },
                 ListViewColumn { text: "Value" }
@@ -44,26 +148,29 @@ Item {
         model: (__isFixedParameter) ? __parsedEditEventData.value : []
         Component {
             id: fixedParameterDelegate
-            Rectangle {
-                height: eventContentLayout.height
-                width: eventContentLayout.width
-                color: systemPalette.base
-                Row {
-                    id: eventContentLayout
-                    Label {
-                        text: modelData.name
-                        width: fixedParameterEditor.headerItem.columnWidths[0]
-                        padding: 4
-                    }
-                    TextField {
-                        selectByMouse: true
-                        width: fixedParameterEditor.headerItem.columnWidths[1]
-                        padding: 4
-                        text: modelData.value
-                        onEditingFinished: __applyChange()
-                        onTextEdited: {
-                            __parsedEditEventData.value[index].value = text;
+            RowLayout {
+                width: ListView.width
+                spacing: 0
+                Label {
+                    Layout.alignment: Qt.AlignTop | Qt.AlignLeft
+                    Layout.preferredWidth: fixedParameterEditor.headerItem.columnWidths[0]
+                    text: modelData.name
+                    padding: 4
+                }
+                Loader {
+                    Layout.preferredWidth: fixedParameterEditor.headerItem.columnWidths[1]
+                    // properties to forward to the editor:
+                    property var parameterModel: __parsedEditEventData.value[index];
+                    property int modelIndex: index;
+
+                    sourceComponent: {
+                        switch(__parsedEditEventData.value[index].type) {
+                            case "float": return parameterEditorFloat;
+                            case "integer": return parameterEditorInteger;
+                            case "string": return parameterEditorString;
+                            case "table": return parameterEditorTable;
                         }
+                        return null;
                     }
                 }
             }
@@ -102,5 +209,4 @@ Item {
             Layout.fillHeight: true
         }
     }
-
 }

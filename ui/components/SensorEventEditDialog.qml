@@ -6,6 +6,9 @@ import SensorReadout 1.0
 
 Dialog {
     id: editingDialog
+    implicitHeight: contentLayout.implicitHeight
+    implicitWidth: contentLayout.implicitWidth
+
     SystemPalette { id: systemPalette; colorGroup: SystemPalette.Active }
     /* edit state */
     property var __editEvent: null
@@ -35,6 +38,7 @@ Dialog {
     }
 
     GridLayout {
+        id: contentLayout
         anchors.fill: parent
         columns: 2
         rowSpacing: 10

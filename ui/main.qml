@@ -16,11 +16,12 @@ Window {
     property bool hasChanges: false
     property string titleFilePath: ""
 
-    width: 640
-    height: 480
+    width: 900
+    height: 550
     visible: true
     title: qsTr("SensorReadout Editor") + (titleFilePath != "" ? " - "+titleFilePath : "") + (hasChanges ? " *" : "")
     color: systemPalette.window
+
 
     function insertNewEventAtIdx(index) {
         var timestamp = 0;
@@ -34,10 +35,10 @@ Window {
         newEvent.timestamp = timestamp;
         editingDialog.openEdit(newEvent,
             function(item) { // saveFn
-                backend.events.setEventAt(index, item);
+                backend.events.setEventAt(backendViewModel.mapToSource(index), item);
             },
             function() { //cancelFn
-                backend.events.removeEvent(index);
+                backend.events.removeEvent(backendViewModel.mapToSource(index));
             }
         );
         root.hasChanges = true;
@@ -344,6 +345,7 @@ Window {
             }
 
             model: SortFilterProxyModel {
+                id: backendViewModel
                 sourceModel: EventListModel {
                     eventList: backend.events
                 }
@@ -468,7 +470,8 @@ Window {
                         onDoubleClicked: {
                             editingDialog.openEdit(model.clone(), function(item) {
                                 root.hasChanges = true;
-                                backend.events.setEventAt(index, item);
+                                // we have a SortFilterProxyModel inbetween, so we have to translate indices!
+                                backend.events.setEventAt(backendViewModel.mapToSource(index), item);
                             });
                         }
                     }
